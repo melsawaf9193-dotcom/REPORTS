@@ -277,18 +277,25 @@ function findDuplicateCodesBySection(text) {
   let currentSection = "";
   const codeMap = {};
   const duplicates = [];
+
   lines.forEach(line => {
-    if (line.includes(":")) { currentSection = normalizeLabel(line.replace(":", "").trim()); return; }
+    if (line.includes(":")) { 
+        currentSection = normalizeLabel(line.replace(":", "").trim()); 
+        return; 
+    }
     if (currentSection === null) return;
 
-    const match = line.match(/^[A-Za-z]\s*-\s*\d+/);
+    // تعديل الـ Regex ليشمل المسافات المرنة
+    const match = line.match(/([A-Za-z]\s*-\s*\d+)/);
     if (match) {
-      const code = match[0].replace(/\s+/g, "").toLowerCase();
+      // إزالة كل المسافات تماماً للمقارنة
+      const code = match[1].replace(/\s+/g, "").toUpperCase();
       if (!codeMap[code]) codeMap[code] = {};
       if (!codeMap[code][currentSection]) codeMap[code][currentSection] = 0;
       codeMap[code][currentSection]++;
     }
   });
+
   for (const code in codeMap) {
     const sections = Object.keys(codeMap[code]);
     sections.forEach(sec => {
@@ -304,14 +311,9 @@ function checkSpecialViolations(text) {
     const lines = text.split("\n");
     let issues = [];
 
-    // 1. جمع كل الأكواد الموجودة في التقرير كاملاً
-    const allCodesInReport = text.match(/[A-Z]-\d+/gi) || [];
-    const normalizedAllCodes = allCodesInReport.map(c => c.toUpperCase().replace(/\s/g, ''));
-
-    // 2. تحديد الأكواد التي تخص البنات فقط (isWomen) من قاعدة البيانات
-    const womenCodes = Object.values(usersMap)
-        .filter(u => u.isWomen && u.code)
-        .map(u => u.code.toUpperCase().replace(/\s/g, ''));
+    // 1. جمع كل الأكواد الموجودة وتوحيد شكلها (إزالة المسافات وتحويلها لكبيرة)
+    const allCodesInReport = text.match(/[A-Z]\s*-\s*\d+/gi) || [];
+    const normalizedAllCodes = allCodesInReport.map(c => c.replace(/\s+/g, '').toUpperCase());
 
     lines.forEach(line => {
         const mentions = line.match(/<@!?\d+>/g);
@@ -321,23 +323,23 @@ function checkSpecialViolations(text) {
             const user = usersMap[getDiscordId(m)];
             if (!user) return;
 
-            // فحص الموانئ (من كودك الأصلي)
+            // توحيد كود المستخدم من قاعدة البيانات
+            const userCodeClean = user.code ? user.code.replace(/\s+/g, '').toUpperCase() : null;
+
+            // فحص الموانئ
             if (line.includes("ميناء لوس") || line.includes("ميناء بوليتو")) {
                 const portName = line.includes("لوس") ? "ميناء لوس" : "ميناء بوليتو";
-                if (user.code) {
-                    const cleanCode = user.code.toUpperCase().replace(/\s/g, '');
-                    if (!normalizedAllCodes.includes(cleanCode)) {
+                if (userCodeClean) {
+                    if (!normalizedAllCodes.includes(userCodeClean)) {
                         issues.push(`فني ${portName} **${user.nickname}** كوده **(${user.code})** غير مسجل في تقرير نائب العمليات.`);
                     }
                 }
             }
 
-            // فحص البنات (المنطق المطلوب): يمنع وجود كودها في أي قسم سفلية
+            // فحص البنات
             if ((line.includes("السيدات") || line.includes("المعتمدين")) && user.isWomen) {
-                if (user.code) {
-                    const cleanCode = user.code.toUpperCase().replace(/\s/g, '');
-                    // إذا وجدنا الكود مكرراً في التقرير، وبما أن الأكواد لا تكتب إلا في الأقسام، فهذا يعني أنها كتبت تحت
-                    if (normalizedAllCodes.includes(cleanCode)) {
+                if (userCodeClean) {
+                    if (normalizedAllCodes.includes(userCodeClean)) {
                          issues.push(`الفنيه **${user.nickname}** كودها **(${user.code})** مكتوب بالخطأ تحت في الاكواد.`);
                     }
                 }
