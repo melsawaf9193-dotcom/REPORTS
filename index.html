@@ -331,7 +331,7 @@ function checkSpecialViolations(text) {
                 const portName = line.includes("لوس") ? "ميناء لوس" : "ميناء بوليتو";
                 if (userCodeClean) {
                     if (!normalizedAllCodes.includes(userCodeClean)) {
-                        issues.push(`فني ${portName} **${user.nickname}** كوده **(${user.code})** غير مسجل في تقرير نائب العمليات.`);
+                       issues.push(`فني ${portName} **${user.nickname}** غير مسجل كودة في الاكواد في تقرير نائب العمليات.`);
                     }
                 }
             }
@@ -405,19 +405,27 @@ function compare(){
     return [...new Set(outArr)];
   };
 
-  Object.keys(sup).sort().forEach(id => {
+Object.keys(sup).sort().forEach(id => {
     if (!ops[id]) {
       hasDifference = true;
-      output += `<div class='missing'>${formatUser(id)}</div>موجود في تقرير الاشراف وغير موجود في تقرير النائب.<br>`;
-      output += originalsForNorms(sup[id], Object.keys(sup[id])).join("<br>") + "<hr>";
+      // جلب البيانات المتغيرة (مثل: اشراف المناطق)
+      let dynamicData = originalsForNorms(sup[id], Object.keys(sup[id])).join(" - ");
+      
+      // الجزء الأحمر في div مستقل، والباقي كله في سطر واحد تحته
+      output += `<div class='missing'>${formatUser(id)}</div>`;
+      output += `موجود في تقرير الاشراف وغير موجود في تقرير النائب (${dynamicData}).<hr>`;
     }
   });
 
   Object.keys(ops).sort().forEach(id => {
     if (!sup[id]) {
       hasDifference = true;
-      output += `<div class='missing'>${formatUser(id)}</div>موجود في تقرير النائب وغير موجود في تقرير الإشراف.<br>`;
-      output += originalsForNorms(ops[id], Object.keys(ops[id])).join("<br>") + "<hr>";
+      // جلب البيانات المتغيرة (مثل: المشرف العام)
+      let dynamicData = originalsForNorms(ops[id], Object.keys(ops[id])).join(" - ");
+      
+      // الجزء الأحمر في div مستقل، والباقي كله في سطر واحد تحته
+      output += `<div class='missing'>${formatUser(id)}</div>`;
+      output += `موجود في تقرير النائب وغير موجود في تقرير الإشراف (${dynamicData}).<hr>`;
     }
   });
 
