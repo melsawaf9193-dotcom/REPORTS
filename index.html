@@ -29,7 +29,7 @@ hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 15px 0; 
 <div class="container">
   <div class="box">
     <h3>تقرير الإشراف</h3>
-    <textarea id="supervision" placeholder="ألصق تقرير الإشراف هنا..."></textarea>
+    <textarea id="supervision" placeholder="ألصق تقرير الاشراف هنا..."></textarea>
   </div>
   <div class="box">
     <h3>تقرير نائب العمليات</h3>
@@ -126,9 +126,10 @@ function findDuplicateCodesBySection(text) {
   return duplicates;
 }
 
-function checkSpecialViolations(text) {
+function checkSpecialViolations(text, allFoundUsers) {
   let issues = [];
   const allCodes = (text.match(/[A-Z]\s*-\s*\d+/gi) || []).map(c => c.replace(/\s+/g, '').toUpperCase());
+  
   let inLadies = false;
   text.split("\n").forEach(line => {
     if (line.includes("السيدات") || line.includes("المعتمدين")) inLadies = true;
@@ -137,11 +138,22 @@ function checkSpecialViolations(text) {
       (line.match(/<@!?\d+>/g) || []).forEach(m => {
         const user = usersMap[getDiscordId(m)];
         if (user && user.code && allCodes.includes(user.code.replace(/\s+/g, '').toUpperCase())) {
-          issues.push(`احذف كود و اكتفي بالمنشن **${user.nickname}** كادر نسائي`);
+          issues.push(`خل نائب العمليات يحذف كود [ ${user.code} ] كادر نسائي`);
         }
       });
     }
   });
+
+  allFoundUsers.forEach(id => {
+    const user = usersMap[getDiscordId(id)];
+    const sections = extractSections(text)[id] || [];
+    if (user && sections.some(s => s.includes("ميناء"))) {
+      if (!allCodes.includes(user.code.replace(/\s+/g, '').toUpperCase())) {
+        issues.push(` خل نائب العمليات  يضيف كود [ ${user.code} ] تحت لكونه فني ميناء و لازن منشن و كتابه كود`);
+      }
+    }
+  });
+  
   return [...new Set(issues)];
 }
 
@@ -152,53 +164,25 @@ function compare(){
   if(!opsRaw || !supRaw) { result.innerHTML = "<div class='missing'>يرجى ملء كلا التقريرين للمقارنة.</div>"; return; }
 
   let output = ""; let hasDifference = false;
-  
-  let specialIssues = checkSpecialViolations(opsRaw);
-  if(specialIssues.length > 0) { hasDifference = true; specialIssues.forEach(msg => output += `<div class='missing'>️ ${msg}</div>`); output += "<hr>"; }
+  const allFoundUsers = Array.from(new Set([...Object.keys(extractSections(opsRaw)), ...Object.keys(extractSections(supRaw))]));
+
+  let specialIssues = checkSpecialViolations(opsRaw, allFoundUsers);
+  if(specialIssues.length > 0) { hasDifference = true; specialIssues.forEach(msg => output += `<div class='missing'> ${msg}</div>`); output += "<hr>"; }
 
   const codeIssues = checkCodes(opsRaw);
   const duplicates = findDuplicateCodesBySection(opsRaw);
-  if (duplicates.length) { 
-    hasDifference = true; 
-    duplicates.forEach(item => {
-        let msg = item.type === "" ? ` ${item.code} مكرر في ${item.section}` : ` ${item.code} مكرر في ${item.sections.join(" و ")}`;
-        output += `<div class='missing'>${msg}</div>`;
-    });
-    output += "<hr>"; 
-  }
-  if (codeIssues.length) { 
-    hasDifference = true; 
-    codeIssues.forEach(item => output += `<div class='missing'> الكود ${item.code} موجود في ${item.section}</div>`); 
-    output += "<hr>"; 
-  }
+  if (duplicates.length) { hasDifference = true; duplicates.forEach(item => output += `<div class='missing'> ${item.code} مكرر في ${item.section || item.sections.join(" و ")}</div>`); output += "<hr>"; }
+  if (codeIssues.length) { hasDifference = true; codeIssues.forEach(item => output += `<div class='missing'> الكود ${item.code} موجود في ${item.section}</div>`); output += "<hr>"; }
 
   const sup = extractSections(clean(supRaw));
   const ops = extractSections(clean(opsRaw));
 
-  let missingInOps = {}; 
-  let missingInSup = {}; 
+  let missingInOps = {}; let missingInSup = {}; 
+  Object.keys(sup).forEach(id => { if (!ops[id]) { let sec = sup[id].join(" - "); if (!missingInOps[sec]) missingInOps[sec] = []; missingInOps[sec].push(formatUser(id)); } });
+  Object.keys(ops).forEach(id => { if (!sup[id]) { const user = usersMap[getDiscordId(id)]; const isInLadies = ops[id].includes("لاعب معتمد والسيدات"); if (isInLadies && user && user.code && user.code.toUpperCase().includes("G")) return; let sec = ops[id].join(" - "); if (!missingInSup[sec]) missingInSup[sec] = []; missingInSup[sec].push(formatUser(id)); } });
 
-  Object.keys(sup).forEach(id => {
-    if (!ops[id]) {
-      let sec = sup[id].join(" - ");
-      if (!missingInOps[sec]) missingInOps[sec] = [];
-      missingInOps[sec].push(formatUser(id));
-    }
-  });
-
-  Object.keys(ops).forEach(id => {
-    if (!sup[id]) {
-      const user = usersMap[getDiscordId(id)];
-      const isInLadies = ops[id].includes("لاعب معتمد والسيدات");
-      if (isInLadies && user && user.code && user.code.toUpperCase().includes("G")) return;
-      let sec = ops[id].join(" - ");
-      if (!missingInSup[sec]) missingInSup[sec] = [];
-      missingInSup[sec].push(formatUser(id));
-    }
-  });
-
-  for (const s in missingInOps) { hasDifference = true; output += `<div class='missing'>${missingInOps[s].join("<br>")}</div>غير موجود في تقرير النائب (${s}).<hr>`; }
-  for (const s in missingInSup) { hasDifference = true; output += `<div class='missing'>${missingInSup[s].join("<br>")}</div>غير موجود في تقرير الإشراف (${s}).<hr>`; }
+  for (const s in missingInOps) { hasDifference = true; output += `<div class='missing'>${missingInOps[s].join("<br>")}</div>ضيف في تقرير النائب (${s}).<hr>`; }
+  for (const s in missingInSup) { hasDifference = true; output += `<div class='missing'>${missingInSup[s].join("<br>")}</div>ضيف في تقرير الاشراف (${s}).<hr>`; }
 
   if (!hasDifference) output = "<b>✅ تمام، التقريرين متطابقين وما فيهمش أي نقص.</b>";
   result.innerHTML = output;
