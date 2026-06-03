@@ -137,7 +137,7 @@ function checkSpecialViolations(text) {
       (line.match(/<@!?\d+>/g) || []).forEach(m => {
         const user = usersMap[getDiscordId(m)];
         if (user && user.code && allCodes.includes(user.code.replace(/\s+/g, '').toUpperCase())) {
-          issues.push(`احذف كود **${user.nickname}** كادر نسائي`);
+          issues.push(`احذف كود و اكتفي بالمنشن **${user.nickname}** كادر نسائي`);
         }
       });
     }
