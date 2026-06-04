@@ -138,7 +138,7 @@ function checkSpecialViolations(text, allFoundUsers) {
       (line.match(/<@!?\d+>/g) || []).forEach(m => {
         const user = usersMap[getDiscordId(m)];
         if (user && user.code && allCodes.includes(user.code.replace(/\s+/g, '').toUpperCase())) {
-          issues.push(`خل نائب العمليات يحذف كود [ ${user.code} ] كادر نسائي`);
+          issues.push(`خل نائب العمليات يحذف كود [ ${user.code} ] كادر نسائي و يكتفي بالمنشن فقط`);
         }
       });
     }
