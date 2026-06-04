@@ -149,7 +149,7 @@ function checkSpecialViolations(text, allFoundUsers) {
     const sections = extractSections(text)[id] || [];
     if (user && sections.some(s => s.includes("ميناء"))) {
       if (!allCodes.includes(user.code.replace(/\s+/g, '').toUpperCase())) {
-        issues.push(` خل نائب العمليات  يضيف كود [ ${user.code} ] تحت لكونه فني ميناء و لازن منشن و كتابه كود`);
+        issues.push(` خل نائب العمليات  يضيف كود [ ${user.code} ] تحت لكونه فني ميناء و لازم منشن و كتابه كود`);
       }
     }
   });
