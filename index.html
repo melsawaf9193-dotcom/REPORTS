@@ -149,7 +149,7 @@ function checkSpecialViolations(text, allFoundUsers) {
     const sections = extractSections(text)[id] || [];
     if (user && sections.some(s => s.includes("ميناء"))) {
       if (!allCodes.includes(user.code.replace(/\s+/g, '').toUpperCase())) {
-        issues.push(` خل نائب العمليات  يضيف كود [ ${user.code} ] تحت لكونه فني ميناء و لازم منشن و كتابه كود`);
+        issues.push(`  خل نائب العمليات  يضيف كود فني ميناء [ ${user.code} ] تحت لازم منشن و كتابه كود`);
       }
     }
   });
@@ -171,7 +171,7 @@ function compare(){
 
   const codeIssues = checkCodes(opsRaw);
   const duplicates = findDuplicateCodesBySection(opsRaw);
-  if (duplicates.length) { hasDifference = true; duplicates.forEach(item => output += `<div class='missing'> ${item.code} مكرر في ${item.section || item.sections.join(" و ")}</div>`); output += "<hr>"; }
+    if (duplicates.length) { hasDifference = true; duplicates.forEach(item => output += `<div class='missing'>الكود ${item.code}   مكرر في ${item.section || item.sections.join(" و ")}</div>`); output += "<hr>"; }
   if (codeIssues.length) { hasDifference = true; codeIssues.forEach(item => output += `<div class='missing'> الكود ${item.code} موجود في ${item.section}</div>`); output += "<hr>"; }
 
   const sup = extractSections(clean(supRaw));
