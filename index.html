@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="ar">
 <head>
 <meta charset="UTF-8" />
@@ -60,10 +59,79 @@ function clean(text){ return text.replace(/\*\*/g,"").replace(/ـ+/g,"").replace
 
 function normalizeLabel(label){
   if(!label) return "";
-  label = label.replace(/[إأآا]/g, "ا").replace(/ى/g, "ي").replace(/ة/g, "ه").replace(/[()]/g, "").replace(/\s+/g, " ").trim();
-  const ignoreList = ["مسؤول افتتاح المتجر", "المشرف الميداني بروم الكراج", "مشرف المنطقة بروم الكراج", "مشرف المتدرب بروم الكراج"];
+
+  label = label
+    .replace(/\*\*/g, "")
+    .replace(/[إأآا]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/[()]/g, "")
+    .replace(/[:：]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const ignoreList = [
+    "مسؤول افتتاح المتجر",
+    "المشرف الميداني بروم الكراج",
+    "مشرف المنطقه بروم الكراج",
+    "مشرف المتدرب بروم الكراج"
+  ];
+
   if (ignoreList.some(item => label.includes(item))) return null;
-  const map = { "قياده الكراج": "القياده", "قيادة الكراج": "القياده", "قياده": "القياده", "قيادة": "القياده", "المشرف العام": "اشراف عام", "اشراف عام": "اشراف عام", "المشرف الميداني": "اشراف ميداني", "اشراف ميداني": "اشراف ميداني", "مشرفين المناطق": "اشراف المناطق", "مشرف المناطق": "اشراف المناطق", "مشرف المنطقة": "اشراف المناطق", "اشراف المناطق": "اشراف المناطق", "السيدات و المعتمدين": "لاعب معتمد والسيدات", "السيدات والمعتمدين": "لاعب معتمد والسيدات", "لاعب معتمد": "لاعب معتمد والسيدات", "لاعب معتمد والسيدات": "لاعب معتمد والسيدات", "العمليات": "العمليات", "نائب العمليات": "نائب العمليات", "مركز الاتصالات": "مركز الاتصالات", "فني ميناء لوس": "ميناء لوس", "ميناء لوس": "ميناء لوس", "فني ميناء بوليتو": "ميناء بوليتو", "ميناء بوليتو": "ميناء بوليتو", "البحث والانقاذ": "البحث والانقاذ", "البحث والإنقاذ": "البحث والانقاذ" };
+
+  const map = {
+    // القيادة
+    "قياده الكراج": "القياده",
+    "قياده": "القياده",
+    "القياده": "القياده",
+
+    // مستشار القائد
+    "مستشار القائد": "مستشار القائد",
+    "المستشار": "مستشار القائد",
+    "مستشار": "مستشار القائد",
+
+    // الاشراف
+    "المشرف العام": "اشراف عام",
+    "اشراف عام": "اشراف عام",
+
+    "المشرف الميداني": "اشراف ميداني",
+    "اشراف ميداني": "اشراف ميداني",
+
+    "مشرفين المناطق": "اشراف المناطق",
+    "مشرف المناطق": "اشراف المناطق",
+    "مشرف المنطقه": "اشراف المناطق",
+    "اشراف المناطق": "اشراف المناطق",
+
+    // المتدربين
+    "مشرفين متدربين": "مشرفين متدربين",
+    "مشرف متدرب": "مشرفين متدربين",
+    "مشرف المتدرب": "مشرفين متدربين",
+
+    // السيدات والمعتمدين
+    "السيدات و المعتمدين": "لاعب معتمد والسيدات",
+    "السيدات والمعتمدين": "لاعب معتمد والسيدات",
+    "لاعب معتمد": "لاعب معتمد والسيدات",
+    "لاعب معتمد والسيدات": "لاعب معتمد والسيدات",
+
+    // العمليات
+    "العمليات": "العمليات",
+    "نائب العمليات": "نائب العمليات",
+
+    // مركز الاتصالات
+    "مركز الاتصالات": "مركز الاتصالات",
+    "مركز الاتصال": "مركز الاتصالات",
+
+    // الميناء
+    "ميناء لوس": "ميناء لوس",
+    "فني ميناء لوس": "ميناء لوس",
+
+    "ميناء بوليتو": "ميناء بوليتو",
+    "فني ميناء بوليتو": "ميناء بوليتو",
+
+    // البحث والانقاذ
+    "البحث والانقاذ": "البحث والانقاذ"
+  };
+
   return map[label] || label;
 }
 
@@ -176,7 +244,31 @@ function compare(){
 
   const sup = extractSections(clean(supRaw));
   const ops = extractSections(clean(opsRaw));
+Object.keys(sup).forEach(id => {
+  if (!ops[id]) return;
 
+  const supSections = sup[id];
+  const opsSections = ops[id];
+
+  const missingSectionsInOps = supSections.filter(sec => !opsSections.includes(sec));
+  const wrongSectionsInOps = opsSections.filter(sec => !supSections.includes(sec));
+
+  if (missingSectionsInOps.length || wrongSectionsInOps.length) {
+    hasDifference = true;
+
+    output += `
+      <div class='missing'>
+        ${formatUser(id)}
+        <br>
+        موجود في تقرير الإشراف: ${supSections.join(" - ")}
+        <br>
+        موجود في تقرير النائب: ${opsSections.join(" - ")}
+      </div>
+      عدل القسم في تقرير النائب.
+      <hr>
+    `;
+  }
+});
   let missingInOps = {}; let missingInSup = {}; 
   Object.keys(sup).forEach(id => { if (!ops[id]) { let sec = sup[id].join(" - "); if (!missingInOps[sec]) missingInOps[sec] = []; missingInOps[sec].push(formatUser(id)); } });
   Object.keys(ops).forEach(id => { if (!sup[id]) { const user = usersMap[getDiscordId(id)]; const isInLadies = ops[id].includes("لاعب معتمد والسيدات"); if (isInLadies && user && user.code && user.code.toUpperCase().includes("G")) return; let sec = ops[id].join(" - "); if (!missingInSup[sec]) missingInSup[sec] = []; missingInSup[sec].push(formatUser(id)); } });
