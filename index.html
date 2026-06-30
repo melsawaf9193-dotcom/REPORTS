@@ -199,11 +199,26 @@ function findDuplicateCodesBySection(text) {
 function checkSpecialViolations(text, allFoundUsers) {
   let issues = [];
   const allCodes = (text.match(/[A-Z]\s*-\s*\d+/gi) || []).map(c => c.replace(/\s+/g, '').toUpperCase());
-  
+  const losSection = (() => {
+  const m = text.match(/لوس[\s\S]*?(?=\n[^ \n].*?:|$)/i);
+  return m ? m[0] : "";
+})();
+
+const sandySection = (() => {
+  const m = text.match(/ساندي[\s\S]*?(?=\n[^ \n].*?:|$)/i);
+  return m ? m[0] : "";
+})();
+
+const losCodes = (losSection.match(/[A-Z]\s*-\s*\d+/gi) || [])
+  .map(c => c.replace(/\s+/g, "").toUpperCase());
+
+const sandyCodes = (sandySection.match(/[A-Z]\s*-\s*\d+/gi) || [])
+  .map(c => c.replace(/\s+/g, "").toUpperCase());
   let inLadies = false;
   text.split("\n").forEach(line => {
     if (line.includes("السيدات") || line.includes("المعتمدين")) inLadies = true;
     else if (line.includes(":") && !line.includes("<@")) inLadies = false;
+
     if (inLadies) {
       (line.match(/<@!?\d+>/g) || []).forEach(m => {
         const user = usersMap[getDiscordId(m)];
@@ -214,15 +229,32 @@ function checkSpecialViolations(text, allFoundUsers) {
     }
   });
 
-  allFoundUsers.forEach(id => {
-    const user = usersMap[getDiscordId(id)];
-    const sections = extractSections(text)[id] || [];
-    if (user && sections.some(s => s.includes("ميناء"))) {
-      if (!allCodes.includes(user.code.replace(/\s+/g, '').toUpperCase())) {
-        issues.push(`  خل نائب العمليات  يضيف كود فني ميناء [ ${user.code} ] تحت لازم منشن و كتابه كود`);
-      }
-    }
-  });
+ allFoundUsers.forEach(id => {
+  const user = usersMap[getDiscordId(id)];
+  const sections = extractSections(text)[id] || [];
+
+  if (!user || !user.code) return;
+
+  const userCode = user.code.replace(/\s+/g, '').toUpperCase();
+
+if (sections.includes("العمليات")) {
+  if (!losCodes.includes(userCode)) {
+    issues.push(`خل نائب العمليات يضيف كود العمليات [ ${user.code} ] في لوس`);
+  }
+}
+
+if (sections.includes("نائب العمليات")) {
+  if (!losCodes.includes(userCode)) {
+    issues.push(`خل نائب العمليات يضيف كود النائب [ ${user.code} ] في  لوس`);
+  }
+}
+
+if (sections.includes("مركز الاتصالات")) {
+  if (!sandyCodes.includes(userCode)) {
+    issues.push(`خل نائب العمليات يضيف كود مركز الاتصالات [ ${user.code} ] في  ساندي`);
+  }
+}
+});
   
   return [...new Set(issues)];
 }
